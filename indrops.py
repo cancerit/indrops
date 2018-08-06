@@ -38,8 +38,8 @@ from contextlib import contextmanager
 def string_hamming_distance(str1, str2):
     """
     Fast hamming distance over 2 strings known to be of same length.
-    In information theory, the Hamming distance between two strings of equal 
-    length is the number of positions at which the corresponding symbols 
+    In information theory, the Hamming distance between two strings of equal
+    length is the number of positions at which the corresponding symbols
     are different.
 
     eg "karolin" and "kathrin" is 3.
@@ -77,7 +77,7 @@ def from_fastq(handle):
 
 def seq_neighborhood(seq, n_subs=1):
     """
-    Given a sequence, yield all sequences within n_subs substitutions of 
+    Given a sequence, yield all sequences within n_subs substitutions of
     that sequence by looping through each combination of base pairs within
     each combination of positions.
     """
@@ -94,18 +94,18 @@ def seq_neighborhood(seq, n_subs=1):
 def build_barcode_neighborhoods(barcode_file, expect_reverse_complement=True):
     """
     Given a set of barcodes, produce sequences which can unambiguously be
-    mapped to these barcodes, within 2 substitutions. If a sequence maps to 
-    multiple barcodes, get rid of it. However, if a sequences maps to a bc1 with 
+    mapped to these barcodes, within 2 substitutions. If a sequence maps to
+    multiple barcodes, get rid of it. However, if a sequences maps to a bc1 with
     1change and another with 2changes, keep the 1change mapping.
     """
 
     # contains all mutants that map uniquely to a barcode
     clean_mapping = dict()
 
-    # contain single or double mutants 
+    # contain single or double mutants
     mapping1 = defaultdict(set)
     mapping2 = defaultdict(set)
-    
+
     #Build the full neighborhood and iterate through barcodes
     with open(barcode_file, 'rU') as f:
         # iterate through each barcode (rstrip cleans string of whitespace)
@@ -118,24 +118,24 @@ def build_barcode_neighborhoods(barcode_file, expect_reverse_complement=True):
             clean_mapping[barcode] = barcode
 
             # for each possible mutated form of a given barcode, either add
-            # the origin barcode into the set corresponding to that mutant or 
+            # the origin barcode into the set corresponding to that mutant or
             # create a new entry for a mutant not already in mapping1
             # eg: barcodes CATG and CCTG would be in the set for mutant CTTG
             # but only barcode CATG could generate mutant CANG
             for n in seq_neighborhood(barcode, 1):
                 mapping1[n].add(barcode)
-            
+
             # same as above but with double mutants
             for n in seq_neighborhood(barcode, 2):
-                mapping2[n].add(barcode)   
-    
+                mapping2[n].add(barcode)
+
     # take all single-mutants and find those that could only have come from one
     # specific barcode
     for k, v in mapping1.items():
         if k not in clean_mapping:
             if len(v) == 1:
                 clean_mapping[k] = list(v)[0]
-    
+
     for k, v in mapping2.items():
         if k not in clean_mapping:
             if len(v) == 1:
@@ -257,7 +257,7 @@ class IndropsProject():
                         filtered_part_filename = filtered_filename.format(run_name=run['name'], split_affix=affix, library_name=lib_name)
                         filtered_part_path = os.path.join(self.project_dir, lib_name, 'filtered_parts', filtered_part_filename)
                         part = V1V2Filtering(filtered_fastq_filename=filtered_part_path,
-                            project=self, 
+                            project=self,
                             bioread_filename=bioread_filename,
                             metaread_filename=metaread_filename,
                             run_name=run['name'],
@@ -335,7 +335,7 @@ class IndropsProject():
         if not hasattr(self, '_gel_barcode1_list_neighborhood'):
             self._gel_barcode1_revcomp_list_neighborhood = build_barcode_neighborhoods(self.paths.gel_barcode1_list, True)
         return self._gel_barcode1_revcomp_list_neighborhood
-    
+
     @property
     def gel_barcode2_revcomp_list_neighborhood(self):
         if not hasattr(self, '_gel_barcode2_revcomp_list_neighborhood'):
@@ -394,13 +394,13 @@ class IndropsProject():
             # Skip non-gene feature lines.
             if '\tgene\t' not in line:
                 continue
-                
+
             gene_biotype_match = re.search(r'gene_biotype \"(.*?)\";', line)
             gene_name_match = re.search(r'gene_name \"(.*?)\";', line)
             if gene_name_match and gene_biotype_match:
                 gene_name = gene_name_match.group(1)
                 gene_biotype = gene_biotype_match.group(1)
-                
+
                 # Record biotype.
                 gene_biotype_dict[gene_name].add(gene_biotype)
 
@@ -431,12 +431,12 @@ class IndropsProject():
             # Skip non-transcript feature lines.
             if 'transcript_id' not in line:
                 continue
-                
+
             gene_name_match = re.search(r'gene_name \"(.*?)\";', line)
             if gene_name_match:
                 gene_name = gene_name_match.group(1)
                 if gene_name in valid_genes:
-                    
+
                     # An unusual edgecase in the GTF for Danio Rerio rel89
                     if ' ' in gene_name:
                         gene_name = gene_name.replace(' ', '_')
@@ -458,7 +458,7 @@ class IndropsProject():
     def build_transcriptome(self, gzipped_genome_softmasked_fasta_filename, gzipped_transcriptome_gtf,
             mode='strict'):
         import pyfasta
-        
+
         index_dir = os.path.dirname(self.paths.bowtie_index)
         self.project_check_dir(index_dir)
 
@@ -515,14 +515,14 @@ class IndropsProject():
             raise Exception(" Error in rsem-prepare reference ")
 
         p_rsem = subprocess.Popen([self.paths.rsem_prepare_reference, '--bowtie', '--bowtie-path', self.paths.bowtie_dir,
-                            '--gtf', gtf_with_genenames_in_transcript_id, 
+                            '--gtf', gtf_with_genenames_in_transcript_id,
                             '--polyA', '--polyA-length', '5', genome_filename, self.paths.bowtie_index])
 
         if p_rsem.wait() != 0:
             raise Exception(" Error in rsem-prepare reference ")
 
         print_to_stderr('Finding soft masked regions in transcriptome')
-        
+
         transcripts_fasta = pyfasta.Fasta(self.paths.bowtie_index + '.transcripts.fa')
         soft_mask = {}
         for tx, seq in transcripts_fasta.items():
@@ -574,7 +574,7 @@ class IndropsLibrary():
 
     def identify_abundant_barcodes(self, make_histogram=True, absolute_min_reads=250):
         """
-        Identify which barcodes are above the absolute minimal abundance, 
+        Identify which barcodes are above the absolute minimal abundance,
         and make a histogram summarizing the barcode distribution
         """
         keep_barcodes = []
@@ -623,7 +623,7 @@ class IndropsLibrary():
 
         print_to_stderr("Created Library filtering summary:")
         print_to_stderr("  " + self.paths.filtering_statistics_filename)
- 
+
         # Make the histogram figure
         if not make_histogram:
             return
@@ -688,7 +688,7 @@ class IndropsLibrary():
             barcodes_for_this_worker.append(sorted_barcode_names[i])
             i += total_workers
 
-        print_to_stderr("""[%s] This worker assigned %d out of %d total barcodes.""" % (self.name, len(barcodes_for_this_worker), len(sorted_barcode_names)))        
+        print_to_stderr("""[%s] This worker assigned %d out of %d total barcodes.""" % (self.name, len(barcodes_for_this_worker), len(sorted_barcode_names)))
 
         for barcode in barcodes_for_this_worker:
             barcode_fastq_filename = analysis_prefix+'%s.%s.fastq' % (self.name, barcode)
@@ -725,11 +725,11 @@ class IndropsLibrary():
         # If we wanted BAM output, and the merge BAM and merged BAM index are present, then we are done
         if (not no_bam) and (os.path.isfile(merged_bam_filename) and os.path.isfile(merged_bam_index_filename)):
             print_to_stderr('Indexed, merged BAM file detected for this worker. Done.')
-            return 
+            return
 
         # Otherwise, we have to check what we need to quantify
 
-        
+
         """
         Function to determine which barcodes this quantification worker might have already quantified.
         This tries to handle interruption during any step of the process.
@@ -738,7 +738,7 @@ class IndropsLibrary():
             - It could have been quantified
                 - but have less than min_counts ---> so it got written to `ignored` file.
                 - and quantification succeeded, meaning
-                    1. there is a line (ending in \n) in the `metrics` file. 
+                    1. there is a line (ending in \n) in the `metrics` file.
                     2. there is a line (ending in \n) in the `quantification` file.
                     3. there (could) be a line (ending in \n) in the `ambiguous quantification` file.
                     4. there (could) be a line (ending in \n) in the `ambiguous quantification partners` file.
@@ -828,7 +828,7 @@ class IndropsLibrary():
         print_to_stderr("""[%s] This worker assigned %d out of %d total barcodes.""" % (self.name, len(barcodes_for_this_worker), len(sorted_barcode_names)))
         if len(barcodes_for_this_worker)-len(barcodes_to_quantify) > 0:
             print_to_stderr("""    %d previously quantified, %d previously ignored, %d left for this run.""" % (len(succesfully_previously_quantified), len(previously_ignored), len(barcodes_to_quantify)))
-        
+
 
 
         print_to_stderr(('{0:<14.12}'.format('Prefix') if analysis_prefix else '') + '{0:<14.12}{1:<9}'.format("Library", "Barcode"), False)
@@ -926,8 +926,8 @@ class IndropsLibrary():
 
         p1 = subprocess.Popen(bowtie_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p2 = subprocess.Popen(quant_cmd, stdin=p1.stdout, stderr=subprocess.PIPE)
-        
-                
+
+
         for line in self.get_reads_for_barcode(barcode, run_filter=run_filter):
             try:
                 p1.stdin.write(line)
@@ -994,7 +994,7 @@ class IndropsLibrary():
             quant_output_files = [fn[len(analysis_prefix):].split('.')[0] for fn in os.listdir(self.paths.quant_dir) if ('worker' in fn and fn[:len(analysis_prefix)]==analysis_prefix)]
         else:
             quant_output_files = [fn.split('.')[0] for fn in os.listdir(self.paths.quant_dir) if (fn[:6]=='worker')]
-        
+
         worker_names = [w[6:] for w in quant_output_files]
         worker_indices = set(int(w.split('_')[0]) for w in worker_names)
 
@@ -1087,7 +1087,7 @@ class IndropsLibrary():
                     print_to_stderr(p2.stderr.read())
             else:
                 print_to_stderr(" === Error in samtools merge ===")
-            print_to_stderr(p1.stderr.read())     
+            print_to_stderr(p1.stderr.read())
 
         # print_to_stderr('Deleting per-worker counts files.')
         # for worker_index in range(total_workers):
@@ -1125,7 +1125,7 @@ class LibrarySequencingPart():
         if not hasattr(self, '_is_filtered'):
             self._is_filtered = os.path.exists(self.filtered_fastq_filename) and os.path.exists(self.barcode_counts_pickle_filename)
         return self._is_filtered
-    
+
     @property
     def is_sorted(self):
         if not hasattr(self, '_is_sorted'):
@@ -1175,7 +1175,7 @@ class LibrarySequencingPart():
 
                 if total_processed_reads%1000000 == 0:
                     print_to_stderr('Read in %.02f percent of all reads (%d)' % (100.*total_processed_reads/total_reads, total_processed_reads))
-                
+
                 if bc in abundant_barcodes:
                     barcode_gzippers[bc].write(to_fastq(name, seq, qual))
                     bcs_with_data.add(bc)
@@ -1207,7 +1207,7 @@ class LibrarySequencingPart():
                     sorted_output_index[new_bc_name] = (original_bc, start_pos, end_pos, end_pos-start_pos, barcode_reads_count)
 
         with open(self.sorted_gzipped_fastq_index_filename, 'w') as f:
-            pickle.dump(sorted_output_index, f)      
+            pickle.dump(sorted_output_index, f)
 
     def get_reads_for_barcode(self, barcode):
         if barcode not in self.sorted_index:
@@ -1227,19 +1227,19 @@ class LibrarySequencingPart():
         """
         We start 3 processes that are connected with Unix pipes.
 
-        Process 1 - Trimmomatic. Doesn't support stdin/stdout, so we instead use named pipes (FIFOs). It reads from FIFO1, and writes to FIFO2. 
-        Process 2 - In line complexity filter, a python script. It reads from FIFO2 (Trimmomatic output) and writes to the ouput file. 
+        Process 1 - Trimmomatic. Doesn't support stdin/stdout, so we instead use named pipes (FIFOs). It reads from FIFO1, and writes to FIFO2.
+        Process 2 - In line complexity filter, a python script. It reads from FIFO2 (Trimmomatic output) and writes to the ouput file.
         Process 3 - Indexer that counts the number of reads for every barcode. This reads from stdin, writes the reads to stdout and writes the index as a pickle to stderr.
 
         When these are done, we start another process to count the results on the FastQ file.
         """
         filtered_dir = os.path.dirname(self.filtered_fastq_filename) #We will use the same directory for creating temporary FIFOs, assuming we have write access.
-        
+
         self.filtering_statistics_counter = defaultdict(int)
         with FIFO(dir=filtered_dir) as fifo2, open(self.filtered_fastq_filename, 'w') as filtered_fastq_file, open(self.filtered_fastq_filename+'.counts.pickle', 'w') as filtered_index_file:
-            
+
             low_complexity_filter_cmd = [self.project.paths.python, self.project.paths.trim_polyA_and_filter_low_complexity_reads_py,
-                '-input', fifo2.filename, 
+                '-input', fifo2.filename,
                 '--min-post-trim-length', self.project.parameters['trimmomatic_arguments']['MINLEN'],
                 '--max-low-complexity-fraction', str(self.project.parameters['low_complexity_filter_arguments']['max_low_complexity_fraction']),
                 ]
@@ -1264,7 +1264,7 @@ class LibrarySequencingPart():
                 trimmomatic_stderr = p1.stderr.read().splitlines()
                 if trimmomatic_stderr[2] != 'TrimmomaticSE: Completed successfully':
                     raise Exception('Trimmomatic did not complete succesfully on %s' % filtered_filename)
-                trimmomatic_metrics = trimmomatic_stderr[1].split() 
+                trimmomatic_metrics = trimmomatic_stderr[1].split()
                 # ['Input', 'Reads:', #READS, 'Surviving:', #SURVIVING, (%SURVIVING), 'Dropped:', #DROPPED, (%DROPPED)]
                 trimmomatic_metrics = {'input' : trimmomatic_metrics[2], 'output': trimmomatic_metrics[4], 'dropped': trimmomatic_metrics[7]}
                 p1.wait()
@@ -1295,19 +1295,19 @@ class V1V2Filtering(LibrarySequencingPart):
     def filter_and_count_reads(self):
         """
         Input the two raw FastQ files
-        Output: 
+        Output:
             - A single fastQ file that uses the read name to store the barcoding information
-            - A pickle of the number of reads originating from each barcode 
+            - A pickle of the number of reads originating from each barcode
         """
         # Relevant paths
         r1_filename, r2_filename = self.metaread_filename, self.bioread_filename
 
         #Get barcode neighborhoods
         bc1s = self.project.gel_barcode1_revcomp_list_neighborhood
-        bc2s = self.project.gel_barcode2_revcomp_list_neighborhood 
+        bc2s = self.project.gel_barcode2_revcomp_list_neighborhood
 
 
-        # This starts a Trimmomatic process, a low complexity filter process, and will 
+        # This starts a Trimmomatic process, a low complexity filter process, and will
         # upon closing, start the barcode distribution counting process.
         last_ping = time.time()
         ping_every_n_reads = 1000000
@@ -1325,7 +1325,7 @@ class V1V2Filtering(LibrarySequencingPart):
         with self.trimmomatic_and_low_complexity_filter_process() as trim_process:
             #Iterate over the weaved reads
             for r_name, r1_seq, r1_qual, r2_seq, r2_qual in self._weave_fastqs(r1_filename, r2_filename):
-                    
+
                 # Check if they should be kept
                 keep, result = self._process_reads(r1_seq, r2_seq, valid_bc1s=bc1s, valid_bc2s=bc2s)
 
@@ -1360,13 +1360,13 @@ class V1V2Filtering(LibrarySequencingPart):
         is_bz_compressed = False
         if r1_fastq.split('.')[-1] == 'gz' and r2_fastq.split('.')[-1] == 'gz':
             is_gz_compressed = True
-            
+
         #Added bz2 support VS
         if r1_fastq.split('.')[-1] == 'bz2' and r2_fastq.split('.')[-1] == 'bz2':
             is_bz_compressed = True
 
         # Decompress Gzips using subprocesses because python gzip is incredibly slow.
-        if is_gz_compressed:    
+        if is_gz_compressed:
             r1_gunzip = subprocess.Popen("gzip --stdout -d %s" % (r1_fastq), shell=True, stdout=subprocess.PIPE)
             r1_stream = r1_gunzip.stdout
             r2_gunzip = subprocess.Popen("gzip --stdout -d %s" % (r2_fastq), shell=True, stdout=subprocess.PIPE)
@@ -1386,12 +1386,12 @@ class V1V2Filtering(LibrarySequencingPart):
             r1_seq = next(r1_stream).rstrip() #Read seq
             next(r1_stream) #+ line
             r1_qual = next(r1_stream).rstrip() #Read qual
-            
+
             next(r2_stream) #Read name
             r2_seq = next(r2_stream).rstrip() #Read seq
             next(r2_stream) #+ line
             r2_qual = next(r2_stream).rstrip() #Read qual
-            
+
             # changed to allow for empty reads (caused by adapter trimming)
             if name:
                 yield name, r1_seq, r1_qual, r2_seq, r2_qual
@@ -1409,7 +1409,7 @@ class V1V2Filtering(LibrarySequencingPart):
                 (if read passes filter)
             False, name of filter that failed
                 (for stats collection)
-        
+
         R1 anatomy: BBBBBBBB[BBB]WWWWWWWWWWWWWWWWWWWWWWCCCCCCCCUUUUUUTTTTTTTTTT______________
             B = Barcode1, can be 8, 9, 10 or 11 bases long.
             W = 'W1' sequence, specified below
@@ -1429,7 +1429,7 @@ class V1V2Filtering(LibrarySequencingPart):
         if rev_w1 in read:
             return False, 'W1_in_R2'
 
-        # # With reads sufficiently long, we will often see a PolyA sequence in R2. 
+        # # With reads sufficiently long, we will often see a PolyA sequence in R2.
         # if polyA in read:
         #     return False, 'PolyA_in_R2'
 
@@ -1443,7 +1443,7 @@ class V1V2Filtering(LibrarySequencingPart):
         # check for empty reads (due to adapter trimming)
         if not read:
             return False, 'empty_read'
-        
+
         #Check for W1 adapter
         #Allow for up to hamming_threshold errors
         if w1 in name:
@@ -1458,23 +1458,23 @@ class V1V2Filtering(LibrarySequencingPart):
                     break
             else:
                 return False, 'No_W1'
-                
+
         bc2_pos=w1_pos+22
         umi_pos=bc2_pos+8
         polyTpos=umi_pos+6
         expected_poly_t = name[polyTpos:polyTpos+minimal_polyT_len_on_R1]
         if string_hamming_distance(expected_poly_t, 'T'*minimal_polyT_len_on_R1) > 3:
                  return False, 'No_polyT'
-            
+
         bc1 = str(name[:w1_pos])
         bc2 = str(name[bc2_pos:umi_pos])
         umi = str(name[umi_pos:umi_pos+6])
-        
+
         #Validate barcode (and try to correct when there is no ambiguity)
         if valid_bc1s and valid_bc2s:
             # Check if BC1 and BC2 can be mapped to expected barcodes
             if bc1 in valid_bc1s:
-                # BC1 might be a neighboring BC, rather than a valid BC itself. 
+                # BC1 might be a neighboring BC, rather than a valid BC itself.
                 bc1 = valid_bc1s[bc1]
             else:
                 return False, 'BC1'
@@ -1522,10 +1522,10 @@ class V3Demultiplexer():
             blanks = [next(s)[:-1]  for s in streams]
             quals = [next(s)[:-1]  for s in streams]
 
-            for pp in processes:
-                p_err = pp.stderr.read()
-                if p_err:
-                    print_to_stderr(p_err)
+#            for pp in processes:
+#                p_err = pp.stderr.read()
+#                if p_err:
+#                    print_to_stderr(p_err)
 
             assert all(name==names[0] for name in names)
             yield names[0], seqs, quals
@@ -1612,7 +1612,7 @@ class V3Demultiplexer():
         ping_header = "{0:>12}{1:>16}{2:>12}{3:>10}{4:>10}{5:>10}{6:>10}   |" + ''.join("{%d:>12.10}"%i for i in range(7,7+len(manager_order)))
         ping_header = ping_header.format("Total Reads", "", "Valid Reads", "No index", "No BC1", "No BC2", "No UMI", *[self.libraries[k].library_name for k in manager_order])
         ping_template = "{total:12d}    {rate:5.1f} sec/M {Valid:12.1%}{Invalid_library_index:10.1%}{Invalid_BC1:10.1%}{Invalid_BC2:10.1%}{UMI_contains_N:10.1%}   |{"+":>12.1%}{".join(manager_order)+":>12.1%}"
-        
+
         def print_ping_to_log(last_ping):
             sec_per_mil = (time.time() - last_ping)/(float(ping_every_n_reads)/10**6) if last_ping else 0
             total = overall_filtering_statistics['Total']
@@ -1629,7 +1629,7 @@ class V3Demultiplexer():
             seqs = [s.decode('utf-8') for s in seqs]
 
             keep, lib_index, result = self._process_reads(r_name, seqs, quals,
-                                                    error_corrected_barcodes, error_corrected_rev_compl_barcodes, 
+                                                    error_corrected_barcodes, error_corrected_rev_compl_barcodes,
                                                     self.sequence_to_index_mapping)
             common__[seqs[1]] += 1
             if keep:
@@ -1652,11 +1652,11 @@ class V3Demultiplexer():
 
             if overall_filtering_statistics['Total']%(ping_every_n_reads*10)==1:
                 print_to_stderr(ping_header)
-            
+
             if overall_filtering_statistics['Total']%ping_every_n_reads == 0:
                 print_ping_to_log(last_ping)
                 last_ping = time.time()
-                
+
         print_ping_to_log(False)
         # Close up the context managers
         for lib in manager_order[::-1]:
