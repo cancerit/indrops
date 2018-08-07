@@ -1,0 +1,11 @@
+#!/bin/bash
+
+module load samtools
+module load RSEM
+module load bowtie
+
+path=$(dirname "$0")
+
+unset PYTHONPATH
+source $path/../env/bin/activate
+python $path/../indrops.py "$@"
